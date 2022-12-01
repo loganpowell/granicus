@@ -1,0 +1,76 @@
+#set( $limit = $util.defaultIfNull($context.args.limit, 100) )
+#set( $query = {
+  "expression": "#partitionKey = :partitionKey",
+  "expressionNames": {
+      "#partitionKey": "campaign_id"
+  },
+  "expressionValues": {
+      ":partitionKey": {
+          "S": "$context.source.id"
+    }
+  }
+} )
+## [Start] Applying Key Condition **
+#if( !$util.isNull($ctx.args.created_at) && !$util.isNull($ctx.args.created_at.beginsWith) )
+  #set( $query.expression = "$query.expression AND begins_with(#sortKey, :sortKey)" )
+  $util.qr($query.expressionNames.put("#sortKey", "created_at"))
+  $util.qr($query.expressionValues.put(":sortKey", { "S": "$ctx.args.created_at.beginsWith" }))
+#end
+#if( !$util.isNull($ctx.args.created_at) && !$util.isNull($ctx.args.created_at.between) )
+  #set( $query.expression = "$query.expression AND #sortKey BETWEEN :sortKey0 AND :sortKey1" )
+  $util.qr($query.expressionNames.put("#sortKey", "created_at"))
+  $util.qr($query.expressionValues.put(":sortKey0", { "S": "$ctx.args.created_at.between[0]" }))
+  $util.qr($query.expressionValues.put(":sortKey1", { "S": "$ctx.args.created_at.between[1]" }))
+#end
+#if( !$util.isNull($ctx.args.created_at) && !$util.isNull($ctx.args.created_at.eq) )
+  #set( $query.expression = "$query.expression AND #sortKey = :sortKey" )
+  $util.qr($query.expressionNames.put("#sortKey", "created_at"))
+  $util.qr($query.expressionValues.put(":sortKey", { "S": "$ctx.args.created_at.eq" }))
+#end
+#if( !$util.isNull($ctx.args.created_at) && !$util.isNull($ctx.args.created_at.lt) )
+  #set( $query.expression = "$query.expression AND #sortKey < :sortKey" )
+  $util.qr($query.expressionNames.put("#sortKey", "created_at"))
+  $util.qr($query.expressionValues.put(":sortKey", { "S": "$ctx.args.created_at.lt" }))
+#end
+#if( !$util.isNull($ctx.args.created_at) && !$util.isNull($ctx.args.created_at.le) )
+  #set( $query.expression = "$query.expression AND #sortKey <= :sortKey" )
+  $util.qr($query.expressionNames.put("#sortKey", "created_at"))
+  $util.qr($query.expressionValues.put(":sortKey", { "S": "$ctx.args.created_at.le" }))
+#end
+#if( !$util.isNull($ctx.args.created_at) && !$util.isNull($ctx.args.created_at.gt) )
+  #set( $query.expression = "$query.expression AND #sortKey > :sortKey" )
+  $util.qr($query.expressionNames.put("#sortKey", "created_at"))
+  $util.qr($query.expressionValues.put(":sortKey", { "S": "$ctx.args.created_at.gt" }))
+#end
+#if( !$util.isNull($ctx.args.created_at) && !$util.isNull($ctx.args.created_at.ge) )
+  #set( $query.expression = "$query.expression AND #sortKey >= :sortKey" )
+  $util.qr($query.expressionNames.put("#sortKey", "created_at"))
+  $util.qr($query.expressionValues.put(":sortKey", { "S": "$ctx.args.created_at.ge" }))
+#end
+## [End] Applying Key Condition **
+{
+  "version": "2018-05-29",
+  "operation": "Query",
+  "query":   $util.toJson($query),
+  "scanIndexForward":   #if( $context.args.sortDirection )
+    #if( $context.args.sortDirection == "ASC" )
+true
+    #else
+false
+    #end
+  #else
+true
+  #end,
+  "filter":   #if( $context.args.filter )
+$util.transform.toDynamoDBFilterExpression($ctx.args.filter)
+  #else
+null
+  #end,
+  "limit": $limit,
+  "nextToken":   #if( $context.args.nextToken )
+$util.toJson($context.args.nextToken)
+  #else
+null
+  #end,
+  "index": "byCampaign"
+}

@@ -1,0 +1,290 @@
+# 
+# access patterns -> schema:
+# 1:N = bulletin  => links
+# N:1 = bulletins => campaign
+# 1:1 = bulletin  => detail
+# N:N = topics    => bulletins // see: https://youtu.be/eUQvsuO6EnU?t=1200
+# 
+
+# prereqs # # # # # # # # # # # # # # # # # # # # # # #
+
+type Campaign 
+    @model 
+    @auth (rules: [{ allow: public, provider: apiKey }])
+{
+    id                         : ID!                # "20190312rcsiss2ccpuprs"
+    # each bulletin can 'belong to' one campaign
+    bulletins                  : [Bulletin]         @connection (keyName: "byCampaign", fields: ["id"])
+}
+
+type Sender 
+    @model 
+    @auth (rules: [{ allow: public, provider: apiKey }])
+{
+    id                         : ID!                # "anthony.j.calabrese@census.gov"
+    # each bulletin can 'belong to' one sender
+    bulletins                  : [Bulletin]         @connection (keyName: "bySender", fields: ["id"])
+}
+
+type Topic 
+    @model 
+    @auth (rules: [{ allow: public, provider: apiKey }])
+{
+    id                         : ID!
+    code                       : String
+    name                       : String              # 'Foreign Trade Standard Data Products'
+    description                : String              # 'Training opportunities'
+    bulletins                  : [BulletinTopic]     @connection (keyName: "byTopic", fields: ["id"])
+    followers                  : [TopicFollower]     @connection (keyName: "followersByTopic", fields: ["id"]) # PRIORITY (new)
+    subscriptions              : [Sub]               @connection (keyName: "subsByTopic", fields: ["id"]) # PRIORITY (new)
+}
+
+# # # # # # # # # # # # # # # # # # # # # # # prereqs # 
+
+type Bulletin
+    @model
+    @auth (rules: [{ allow: public, provider: apiKey }])
+    @key(name: "byCampaign", fields: ["campaign_id", "created_at"], queryField: "bulletinsByCampaign") 
+    @key(name: "bySender",   fields: ["sender_email", "created_at"], queryField: "bulletinsBySender") 
+{
+    id                         : ID!
+    campaign_id                : ID!                 # "20190312rcsiss2ccpuprs"
+    campaign                   : Campaign            @connection (fields: ["campaign_id"])
+    sender_email               : ID!                 # "anthony.j.calabrese@census.gov"
+    sender                     : Sender              @connection (fields: ["sender_email"])
+    created_at                 : AWSDateTime 
+    detail                     : BulletinDetail  
+    links                      : [Link]            
+    topics                     : [BulletinTopic]     @connection (keyName: "byBulletin", fields: ["id"])
+}
+
+## enable N:N relationship via a ref
+
+type BulletinTopic 
+    @model (queries: null)                          # disable queries (only mutations)
+    @auth (rules: [{ allow: public, provider: apiKey }])
+    @key(name: "byBulletin", fields: ["bulletin_id", "topic_id"])
+    @key(name: "byTopic",    fields: ["topic_id", "bulletin_id"]) 
+{
+    id                         : ID!
+    bulletin_id                : ID!
+    topic_id                   : ID! 
+    created_at                 : AWSDateTime
+    to_date                    : SubsReport       
+    this_period                : SubsReport       
+    bulletin                   : Bulletin!           @connection (fields: ["bulletin_id"])
+    topic                      : Topic!              @connection (fields: ["topic_id"])
+}
+
+type SubsReport {
+    total_subscriptions        : Int
+    new_subscriptions          : Int
+    deleted_subscriptions      : Int
+    bulletins_sent             : Int
+    allocated                  : Allocation
+}
+
+type Allocation { 
+    direct                     : Int
+    overlay                    : Int
+    signup                     : Int
+    upload                     : Int
+    other                      : Int
+    all_network                : Int
+}
+
+type BulletinDetail {
+    subject                    : String             # "Here's What You Missed Statistics In Schools"
+    to_text                    : String             # "Subscribers of Administrators, Education Organizations, ..."
+    delivery_status_name       : String             # "Delivered"
+    addresses_count            : Int                # 48965
+    success_count              : Int                # 45992
+    failed_count               : Int                # 2973
+    percent_success            : Float              # 93.928316144184621669
+    immediate_email_recipients : Int                # 48965
+    emails_delivered           : Int                # 45992
+    emails_failed              : Int                # 2973
+    percent_emails_delivered   : Float              # 93.928316144184621669
+    opens_count                : Int                # 696
+    percent_opened             : Float              # 1.513306662028178814
+    nonunique_opens_count      : Int                # 891
+    links_count                : Int                # 18
+    click_rate                 : Float              # 0.19786049747782223
+    clicks_count               : Int                # 91
+    nonunique_clicks_count     : Int                # 119
+    digest_email_recipients    : Int                # 0
+    #------------------- BUBBLED -------------------#
+    unique_click_count         : Int                # 97
+    total_click_count          : Int                # 126
+    unsubscribes               : Int                # 19
+    # bubble up further to Bulletin -> campaign  : Campaign         # "20190312rcsiss2ccpuprs"
+}
+
+type Link {
+    id                         : ID!                # "123245322"
+    link_url                   : AWSURL             # "https://bl.ow/utm_campaign=2019rs...govdelivery"
+    unique_click_count         : Int                # 1
+    total_click_count          : Int                # 2
+}
+
+### DAILY SUBSCRIBER SUMMARY REPORT #
+
+type SubsSummary 
+    @model 
+    @auth (rules: [{ allow: public, provider: apiKey }])
+{
+    # inject per day
+    id                         : ID!                # "2019-03-12"
+    direct_subscribers         : Int                # 521     
+    direct_subscriptions       : Int                # 7015    
+    overlay_subscribers        : Int                # 277     
+    overlay_subscriptions      : Int                # 292     
+    signup_subscribers         : Int                # 0       
+    signup_subscriptions       : Int                # 0       
+    upload_subscribers         : Int                # 9761    
+    upload_subscriptions       : Int                # 13220   (combine with diff on future topic bulletins)
+    other_subscribers          : Int                # 0       
+    other_subscriptions        : Int                # 0       
+    total_subscribers          : Int                # 1350491 (cumulative)
+    total_subscriptions        : Int                # 6175151 (cumulative)
+    deleted_subscribers        : Int                # 3274    
+    deleted_subscriptions      : Int                # 30442   
+    all_network_subscribers    : Int                # 3843    
+    all_network_subscriptions  : Int                # 31902   
+    net_subscribers            : Int                # 11128   
+    net_subscriptions          : Int                # 21987   
+}  
+
+type Accumulator 
+    @model 
+    @auth (rules: [{ allow: public, provider: apiKey }])
+{
+    id                         : ID!
+    all_topics                 : [String!]
+    all_campaigns              : [String!]
+    all_senders                : [String!]
+}
+
+####### NEW: Added 09/17/2020 PRIORITY #######
+
+# Field Name              Data Type     Description 
+# FOLLOWER_ID             NUMBER        The follower_id identifies each individual subscriber in the database. 
+# DESTINATION             TEXT          The email address or phone number of the specified subscriber. 
+# LATITUDE                NUMBER        The Latitude location of origin for the subscriber. 
+# LONGITUDE               NUMBER        The Longitude location or origin for the subscriber. 
+# REFERRER_URL            TEXT          The URL link in which the subscriber came in to the system. 
+# SUBSCRIBER_CREATED_AT   DATE          The date of subscriber creation in UTC format. 
+# SUBSCRIBER_SOURCE       TEXT          where the subscriber originated (Network, Overlay, Web Services,...)
+# SUBSCRIPTION_CREATED_AT DATE          The date of subscription creation in UTC format. 
+# SUBSCRIPTION_SOURCE     TEXT          where the subscription originated (Network, Overlay, Web Services,...)
+# TOPIC_NAME              TEXT          The name of the topic subscribed to
+
+## enable N:N relationship via a ref
+# Subscriber -> many Topics | Topic -> many Subscribers
+
+type TopicFollower
+    @model (queries: null)
+    @auth (rules: [{ allow: public, provider: apiKey }])
+    @key(name: "topicsByFollower", fields: ["follower_id", "topic_id"], queryField: "topicsByFollower")
+    @key(name: "followersByTopic", fields: ["topic_id", "follower_id"], queryField: "followersByTopic")
+{
+    id                         : ID!
+    topic_id                   : ID!
+    follower_id                : ID!
+    #created_at                 : AWSDateTime       # removed (dup)
+    topic                      : Topic!            @connection (fields: ["topic_id"])
+    follower                   : Follower!         @connection (fields: ["follower_id"])
+}
+
+# Subscribers can subscribe to many topics
+# Subscribers can have many subscriptions
+
+# TODO: Add cognito auth to READ this model (to protect email addresses)
+
+# RULES ##########################################
+# Reference: https://aws.amazon.com/blogs/mobile/graphql-security-appsync-amplify/
+# See allowed authorization mode + provider combinations: https://docs.amplify.aws/cli/graphql-transformer/directives#allowed-authorization-mode-vs-provider-combinations
+
+# AppSync directives      Amplify @auth equivalent rule
+# @aws_api_key            { allow: public               , provider: apiKey }
+# @aws_iam                { allow: public/private       , provider: iam }
+# @aws_oidc               { allow: private/owner        , provider: oidc }
+# @aws_cognito_user_pools { allow: private/owner/groups , provider: userPools }
+# @aws_auth               { allow: private/owner/groups , provider: userPools }
+
+########################################### RULES #
+
+
+# 📢 Issue: graphql doesn't currently support primitive 'union' types: https://github.com/graphql/graphql-spec/issues/215#issuecomment-631402812
+# Field level authorization: https://docs.amplify.aws/cli/graphql-transformer/directives#authorizing-subscriptions
+type Follower 
+    @model
+    ##{ allow: owner, ownerField: "owner", operations: [create, update, delete, read] }, # (long format)
+    @auth (rules: [{ allow: public, provider: apiKey }])
+{
+    id                         : ID!               # FOLLOWER_ID: 1255156412,
+    destination                : String            @auth (rules: [ 
+                                                        # API key can write 
+                                                        { allow: public, provider: apiKey, operations: [create, update, delete] }, 
+                                                        # only cognito auth'd users can read
+                                                        { allow: private, provider: userPools operations: [read] }, 
+                                                    ])
+    domain                     : String            # PRIORITY: new (strip PII from email)
+    latitude                   : Float             # LATITUDE: 40.8299,
+    longitude                  : Float             # LONGITUDE: -73.8646,
+    created_at                 : AWSDateTime       # SUBSCRIBER_CREATED_AT: 1598371808,
+    source                     : String            # SUBSCRIBER_SOURCE: "Network",
+    topics                     : [TopicFollower]   @connection (keyName: "topicsByFollower", fields: ["id"] )
+    subscriptions              : [Sub]             @connection (keyName: "subsByFollower", fields: ["id"])
+}
+
+# Bottom value for subscribers
+
+type Sub
+    @model
+    @auth (rules: [{ allow: public, provider: apiKey }])
+    @key (name: "subsByTopic", fields: ["topic_id", "created_at"], queryField: "subsByTopic")
+    @key (name: "subsByFollower", fields: ["follower_id", "created_at"], queryField: "subsByFollower")
+{
+    id                         : ID!              
+    referrer_url               : AWSURL            # REFERRER_URL: "https://public.govdelivery.com/accounts/USFNS/subscriber/new",
+    created_at                 : AWSDateTime       # SUBSCRIPTION_CREATED_AT: 1598371808,
+    deleted_at                 : AWSDateTime       # FIXME TBD when granicus adds it
+    source                     : String            # SUBSCRIPTION_SOURCE: "Network",
+    #topic_name                 : String            # TOPIC_NAME: "Census Updates" FIXME (use ID instead)
+    topic_id                   : ID!               # FIXME TBD (awaiting confirmation)
+    follower_id                : ID!               
+    topic                      : Topic             @connection (fields: ["topic_id"])
+    follower                   : Follower          @connection (fields: ["follower_id"])
+}
+
+# Taxonomy of @directives:
+# - @model:         establishes a DynamoDB table containing the properties of the type
+# - @key:           specifies a custom global secondary index on the table (established by @model)
+#   - name:         names the global secondary index (defaults to a concatenation of ids from join)
+#   - fields:       an [] (array) of values that determine the DynamoDB query properties
+#       - 1)        first element of array is the Partition Key
+#       - 2)        second element of array is the Sort Key (optional, but recommended). Allows comparison operators (e.g., eq, gt, lt, etc.)
+#   - queryField:   the actual graphql query name that is generated for the schema
+
+# Taxonomy of @directives:
+# - @model:         establishes a DynamoDB table containing
+#   the properties of the type
+# - @key:           specifies a custom global secondary
+#   index on the table (established by @model)
+#   - name:         names the global secondary index
+#     (defaults to a concatenation of ids from join)
+#   - fields:       an [] (array) of values that determine
+#     the DynamoDB query properties
+#     - 1) first element of array is the Partition Key
+#     - 2) second element of array is the Sort Key
+#          (optional, but recommended). Allows comparison
+#          operators (e.g., eq, gt, lt, etc.)
+#     - 3) The primary @key with 3 fields performs a bit
+#          more magic than the 1 and 2 field variants. The
+#          first field orderId will be the HASH key as
+#          expected, but the SORT key will be a new
+#          composite key. See more [in the
+#          docs](https://docs.amplify.aws/cli/graphql-transformer/directives#designing-data-models-using-key)
+#   - queryField:   the actual graphql query name that is
+#     generated for the schema

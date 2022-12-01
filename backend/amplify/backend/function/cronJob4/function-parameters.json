@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "api": {
+      "granicus": [
+        "create",
+        "read",
+        "update",
+        "delete"
+      ]
+    }
+  },
+  "lambdaLayers": []
+}

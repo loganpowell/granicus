@@ -1,0 +1,42 @@
+{
+    "paths": [
+        {
+            "name": "/subs",
+            "lambdaFunction": "upload",
+            "privacy": {
+                "private": true,
+                "auth": [
+                    "/POST",
+                    "/GET",
+                    "/PUT",
+                    "/PATCH",
+                    "/DELETE"
+                ]
+            },
+            "policyResourceName": "/subs"
+        }
+    ],
+    "resourceName": "subs",
+    "apiName": "subs",
+    "functionArns": [
+        {
+            "lambdaFunction": "upload"
+        }
+    ],
+    "privacy": {
+        "auth": 1,
+        "unauth": 0,
+        "authRoleName": "amplify-granicus-env-93734-authRole",
+        "unAuthRoleName": "amplify-granicus-env-93734-unauthRole"
+    },
+    "dependsOn": [
+        {
+            "category": "function",
+            "resourceName": "upload",
+            "attributes": [
+                "Name",
+                "Arn"
+            ]
+        }
+    ]
+}

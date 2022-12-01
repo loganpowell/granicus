@@ -1,0 +1,25 @@
+{
+  "env": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-granicus-env-93734-authRole",
+      "UnauthRoleArn": "arn:aws:iam::538069693173:role/amplify-granicus-env-93734-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::538069693173:role/amplify-granicus-env-93734-authRole",
+      "Region": "us-east-1",
+      "DeploymentBucketName": "amplify-granicus-env-93734-deployment",
+      "UnauthRoleName": "amplify-granicus-env-93734-unauthRole",
+      "StackName": "amplify-granicus-env-93734",
+      "StackId": "arn:aws:cloudformation:us-east-1:538069693173:stack/amplify-granicus-env-93734/3b420d30-9b68-11ea-a1fd-1277ff2044b7",
+      "AmplifyAppId": "d1oexz5qt8uf98"
+    },
+    "categories": {
+      "auth": {
+        "cognitoa2f17921": {},
+        "cognitocf034e47": {},
+        "granicus43525c61": {},
+        "granicus01d21203": {},
+        "granicusAuth": {},
+        "granicusCognito": {}
+      }
+    }
+  }
+}
